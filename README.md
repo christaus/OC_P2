@@ -1,6 +1,6 @@
-#P2
+# P2
 Programme d'extraction des prix  
-##Descriptif :  
+## Descriptif :  
 Extraire les données suivantes: 
   
 - product_page_url  
@@ -14,7 +14,7 @@ Extraire les données suivantes:
 - review_rating  
 - image_url  
 
-##Cas d'usage:  
+## Cas d'usage:  
   
 A. Récupère une page (un ouvrage) du site http://books.toscrape.com/ vers un fichier CSV.    
   
@@ -22,15 +22,15 @@ B. Récupère tous les ouvrages d'une catégorie du site http://books.toscrape.c
   
 C. Récupère toutes les catégories et tous les ouvrages du site http://books.toscrape.com/ vers des fichiers CSV organisés en catégories.
 
-##Installation :  
+## Installation :  
 
-###Installation générique:    
+### Installation générique:    
 Python3 dois être installé sur votre système depuis https://www.python.org/  
 Il est fortement recommandé d'utiliser un environnement virtuel.  
 Pour installer les librairies nécessaires vous n'avez ensuite qu'à taper:  
 python -m pip -r requirments.txt  
 
-###Installation sous linux:  
+### Installation sous linux:  
 Un fichier Makefile fera le travail pour vous, allez simplement dans
 le répertoire du projet puis tapez:  
   
@@ -44,7 +44,7 @@ Pour nettoyer le projet:
   
 make clean  
   
-##Utilisation :  
+## Utilisation :  
   
 python main.py *OPTIONS* URL  
   
@@ -52,5 +52,5 @@ Le logiciel déterminera si l'URL donnée corresponds à un livre, une
 catégorie ou au site entier puis collectera les données en
 conséquences (voir les cas d'usages A, B ou C).  
   
-###Option :  
+### Option :  
 -- images / -i pour charger les images
