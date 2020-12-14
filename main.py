@@ -132,13 +132,6 @@ class ScrapeIt:
                     "/")] + "/" + next_page.attrs.get("href")
                 self.scraping_category(next_page)
 
-    """def load_images(self):
-        # Download images
-        global library
-
-        for livre in library:
-            print(f"Downloading image {livre.image_url}")"""
-
     def load_book(self, el):
         # Download a book
         global library
