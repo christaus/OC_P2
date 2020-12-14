@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-import csv
 import os
 import shutil
 import sys
@@ -7,6 +6,8 @@ from dataclasses import dataclass
 
 import bs4
 import requests
+
+import csv
 
 include_images = False
 library = []
@@ -237,8 +238,17 @@ class ScrapeIt:
 
         # Parsing HTML
         soup = bs4.BeautifulSoup(requete.text, 'html.parser')
+
+        # Scraping every category
         for element in soup.select("aside div ul li ul a"):
-            print(element)
+            data = str(element)
+            from_offset = data.find("catalogue/category/books/")
+            to_offset = data[from_offset:].find("\"") + 9
+            del library[:]
+            category_to_scrap = "https://books.toscrape.com/" + data[from_offset:to_offset]
+            self.scraping_category(category_to_scrap)
+            f = library[0][7] + ".csv"
+            write_csv(f)
 
 
 if __name__ == '__main__':
