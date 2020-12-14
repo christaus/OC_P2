@@ -7,11 +7,11 @@ import bs4
 import requests
 
 include_images = False
-bibliotheque = []
+library = []
 
 
 @dataclass
-class Livre:
+class Book:
     # Un livre
     product_page_url: str
     universal_product_code_upc: str
@@ -27,195 +27,201 @@ class Livre:
 
 def ecrire_csv(nom_fichier = "default.csv"):
     # Ecriture du fichier csv
-    global bibliotheque
+    global library
 
     with open(nom_fichier, "w", newline="") as csvfile:
         spamwriter = csv.writer(csvfile, delimiter=",")
-        for livre in bibliotheque:
+        for livre in library:
             spamwriter.writerow(livre)
 
 
-class P2:
+class ScrapeIt:
+    ''' Class that scrape:
+    A. A book if URL matching
+    B. A category if URL matching
+    C. The whole categories and books if URL matching
+
+    Data will be recorded as csv files.
+    '''
     def __init__(self, argv):
-        global include_images, bibliotheque
+        global include_images, library
 
         for el in argv[1:]:
             el = el.lower()
-            del bibliotheque[:]
+            del library[:]
 
-            # Doit-on charger les iamges ?
+            # Do we need to download images ?
             if "-i" == el or "--images" == el:
                 include_images = True
                 continue
 
-            # Passage en https
+            # Forced use of https
             if el.startswith("http://"):
-                # Passage au https, il est grand temps !
-                print("Vivons au présent, passage en https")
+                print("Let's use https")
                 el = "https://" + el[7:]
 
             if not el.startswith("https://"):
-                print(f"{el} ne semble pas être une url valide")
+                print(f"{el} is not a valid URL")
                 continue
 
             if el.startswith("https://books.toscrape.com/catalogue/category/"):
-                # Téléchargement d'une catégorie
-                print("Chargement d'une catégorie")
-                self.chargement_categorie(el)
-                fichier = bibliotheque[0][7] + ".csv"
+                # Scraping a category
+                print("Scraping a category...")
+                self.scraping_category(el)
+                fichier = library[0][7] + ".csv"
                 ecrire_csv(fichier)
                 continue
             elif el.startswith("https://books.toscrape.com/catalogue/"):
-                # Téléchargement d'un livre
-                print("Chargement d'un livre")
-                fichier = self.chargement_livre(el) + ".csv"
+                # Scraping a book
+                print("Scraping a single book...")
+                fichier = self.load_book(el) + ".csv"
                 ecrire_csv(fichier)
                 continue
             elif el == "https://books.toscrape.com/" or el == "https://books.toscrape.com":
-                # Téléchargement du site entier
-                print("Chargement du site entier")
-                self.chargement_site(el)
+                # Scraping the whole site
+                print("Scraping the whole site...")
+                self.load_site(el)
                 continue
             else:
-                print(f"Argument {el} non reconnu")
+                print(f"Unknown Argument {el}")
 
-    def chargement_categorie(self, el):
-        # Chargement d'une catégorie
+    def scraping_category(self, el):
+        # Scraping a category
         try:
             requete = requests.request("get", el)
         except:
-            print(f"Ne peux pas traiter {el}")
+            print(f"Cannot load {el}")
             return 1
 
         if requete.status_code != 200:
-            print(f"Erreur HTML status_code: {requete.status_code} pour {el}")
+            print(f"Error HTML status_code: {requete.status_code} at {el}")
             return 1
 
-        # Parse HTML
+        # HTML Parsing
         soup = bs4.BeautifulSoup(requete.text, 'html.parser')
 
-        # Extrait les données des articles un par un
-        a_visiter = False
+        # Extrait articles data
+        to_visit = False
         for article in soup.select("article a"):
-            page_article = "https://books.toscrape.com/catalogue/" + article.attrs.get("href")[9:]
-            a_visiter = not a_visiter
-            if a_visiter:
-                self.chargement_livre(page_article)
+            article_page = "https://books.toscrape.com/catalogue/" + article.attrs.get("href")[9:]
+            to_visit = not to_visit
+            if to_visit:
+                self.load_book(article_page)
 
-        # Passe à la page suivante
-        for suivante in soup.select(".next a"):
-            if suivante:
-                suivante = requete.url[:requete.url.rfind("/")] + "/" + suivante.attrs.get("href")
-                self.chargement_categorie(suivante)
+        # Go to next page
+        for next_page in soup.select(".next a"):
+            if next_page:
+                next_page = requete.url[:requete.url.rfind("/")] + "/" + next_page.attrs.get("href")
+                self.scraping_category(next_page)
 
-    def chargement_images(self):
-        # Chargement des images
-        global bibliotheque
+    def load_images(self):
+        # Download images
+        global library
 
-        for livre in bibliotheque:
-            print(f"Chargement de l'image {livre.image_url}")
+        for livre in library:
+            print(f"Downloading image {livre.image_url}")
 
-    def chargement_livre(self, el):
-        # Chargement d'un livre
-        global bibliotheque
-        print(f"Visite de l'URL: {el}")
-        nouveau_livre = Livre(product_page_url=el,
-                              universal_product_code_upc="string",
-                              title="string",
-                              price_including_tax=11.32,
-                              price_excluding_tax=9.43,
-                              number_available=16,
-                              product_description="string",
-                              category="string",
-                              review_rating=2
-                              )
+    def load_book(self, el):
+        # Download a book
+        global library
+        print(f"Visiting URL: {el}")
+        new_book = Book(product_page_url=el,
+                        universal_product_code_upc="string",
+                        title="string",
+                        price_including_tax=11.32,
+                        price_excluding_tax=9.43,
+                        number_available=16,
+                        product_description="string",
+                        category="string",
+                        review_rating=2
+                        )
 
         try:
             requete = requests.request("get", el)
         except:
-            print(f"Ne peux pas traiter {el}")
+            print(f"Can't load {el}")
             return 1
 
         if requete.status_code != 200:
-            print(f"Erreur HTML status_code: {requete.status_code} pour {el}")
+            print(f"Error HTML status_code: {requete.status_code} at {el}")
             return 1
 
-        # Parse HTML
+        # Parsing HTML
         soup = bs4.BeautifulSoup(requete.text, 'html.parser')
 
-        # Extraction des champs
+        # Fields extraction
         for element in soup.select(".table-striped"):
-            for ligne in element.select("tr"):
-                if ligne.th.text == "UPC":
-                    nouveau_livre.universal_product_code_upc = ligne.td.text
-                elif ligne.th.text == "Price (excl. tax)":
-                    nouveau_livre.price_excluding_tax = float(ligne.td.text[2:])
-                elif ligne.th.text == "Price (incl. tax)":
-                    nouveau_livre.price_including_tax = float(ligne.td.text[2:])
-                elif ligne.th.text == "Availability":
-                    nouveau_livre.number_available = int(''.join(c for c in ligne.td.text if c.isdigit()))
-        nouveau_livre.title = soup.select(".product_main h1")[0].text
-        nouveau_livre.product_description = soup.select("article > p")[0].text.strip(" \n\r")
-        nouveau_livre.category = soup.select("body > div > div > ul > li > a")[2].text
-        nombre_etoiles = str(soup.select(".star-rating")[0])
-        position = nombre_etoiles.find("star-rating")
-        nombre_etoiles = nombre_etoiles[position:position + 15]
-        etoiles = 0
-        if "One" in nombre_etoiles:
-            etoiles = 1
-        elif "Two" in nombre_etoiles:
-            etoiles = 2
-        elif "Thr" in nombre_etoiles:
-            etoiles = 3
-        elif "Fou" in nombre_etoiles:
-            etoiles = 4
-        elif "Fiv" in nombre_etoiles:
-            etoiles = 5
-        nouveau_livre.review_rating = etoiles
+            for line in element.select("tr"):
+                if line.th.text == "UPC":
+                    new_book.universal_product_code_upc = line.td.text
+                elif line.th.text == "Price (excl. tax)":
+                    new_book.price_excluding_tax = float(line.td.text[2:])
+                elif line.th.text == "Price (incl. tax)":
+                    new_book.price_including_tax = float(line.td.text[2:])
+                elif line.th.text == "Availability":
+                    new_book.number_available = int(''.join(c for c in line.td.text if c.isdigit()))
+        new_book.title = soup.select(".product_main h1")[0].text
+        new_book.product_description = soup.select("article > p")[0].text.strip(" \n\r")
+        new_book.category = soup.select("body > div > div > ul > li > a")[2].text
+        stars = str(soup.select(".star-rating")[0])
+        offset = stars.find("star-rating")
+        stars = stars[offset:offset + 15]
+        rating = 0
+        if "One" in stars:
+            rating = 1
+        elif "Two" in stars:
+            rating = 2
+        elif "Thr" in stars:
+            rating = 3
+        elif "Fou" in stars:
+            rating = 4
+        elif "Fiv" in stars:
+            rating = 5
+        new_book.review_rating = rating
         image_url = str(soup.select("article > div > div > div > div > div > div > img")[0])
         image_url = "https://books.toscrape.com/" + image_url[image_url.find("src=\"")+11:image_url.find("\"/>")]
-        nouveau_livre.image_url = image_url
+        new_book.image_url = image_url
 
-        bibliotheque.append([nouveau_livre.product_page_url,
-                             nouveau_livre.universal_product_code_upc,
-                             nouveau_livre.title,
-                             nouveau_livre.price_including_tax,
-                             nouveau_livre.price_excluding_tax,
-                             nouveau_livre.number_available,
-                             nouveau_livre.product_description,
-                             nouveau_livre.category,
-                             nouveau_livre.review_rating,
-                             nouveau_livre.image_url])
+        library.append([new_book.product_page_url,
+                        new_book.universal_product_code_upc,
+                        new_book.title,
+                        new_book.price_including_tax,
+                        new_book.price_excluding_tax,
+                        new_book.number_available,
+                        new_book.product_description,
+                        new_book.category,
+                        new_book.review_rating,
+                        new_book.image_url])
 
         if include_images:
-            # Recupère l'image
-            print(f"Chargement de l'image: {nouveau_livre.image_url}")
-            reponse = requests.get(nouveau_livre.image_url, stream=True)
+            # Download image if needed
+            print(f"Downloading image: {new_book.image_url}")
+            reponse = requests.get(new_book.image_url, stream=True)
             if reponse.status_code == 200:
-                with open(nouveau_livre.image_url[nouveau_livre.image_url.rfind("/")+1:], 'wb') as f:
+                with open(new_book.image_url[new_book.image_url.rfind("/")+1:], 'wb') as f:
                     reponse.raw.decode_content = True
                     shutil.copyfileobj(reponse.raw, f)
-        return nouveau_livre.title
+        return new_book.title
 
-    def chargement_site(self, el):
-        # Chargement du site entier
-        print(f"Récupération du site entier: {el}")
+    def load_site(self, el):
+        # Loading site
+        print(f"Downloading the whole site: {el}")
 
         try:
             requete = requests.request("get", el)
         except:
-            print(f"Ne peux pas traiter {el}")
+            print(f"Can't load {el}")
             return 1
 
         if requete.status_code != 200:
-            print(f"Erreur HTML status_code: {requete.status_code} pour {el}")
+            print(f"Error HTML status_code: {requete.status_code} pour {el}")
             return 1
 
-        # Parse HTML
+        # Parsing HTML
         soup = bs4.BeautifulSoup(requete.text, 'html.parser')
         for element in soup.select("aside div ul li ul a"):
             print(element)
 
 
 if __name__ == '__main__':
-    app = P2(sys.argv)
+    app = ScrapeIt(sys.argv)
