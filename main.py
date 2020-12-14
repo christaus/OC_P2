@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 import csv
+import os
+import shutil
 import sys
 from dataclasses import dataclass
-import shutil
+
 import bs4
 import requests
 
@@ -25,11 +27,21 @@ class Book:
     image_url: str = "https://image.url"
 
 
-def ecrire_csv(nom_fichier = "default.csv"):
-    # Ecriture du fichier csv
+def create_directory(directory):
+    # Create a directory
+    if os.path.isdir(directory):
+        return 1
+    else:
+        os.mkdir(directory)
+
+
+def write_csv(nom_fichier="default.csv"):
+    # Writing csv file
     global library
 
-    with open(nom_fichier, "w", newline="") as csvfile:
+    create_directory("csv" + os.sep + library[0][7])
+
+    with open("csv" + os.sep + library[0][7] + os.sep + nom_fichier, "w", newline="") as csvfile:
         spamwriter = csv.writer(csvfile, delimiter=",")
         for livre in library:
             spamwriter.writerow(livre)
@@ -43,8 +55,12 @@ class ScrapeIt:
 
     Data will be recorded as csv files.
     '''
+
     def __init__(self, argv):
         global include_images, library
+
+        # Create directory to store csv files
+        create_directory("csv")
 
         for el in argv[1:]:
             el = el.lower()
@@ -69,13 +85,13 @@ class ScrapeIt:
                 print("Scraping a category...")
                 self.scraping_category(el)
                 fichier = library[0][7] + ".csv"
-                ecrire_csv(fichier)
+                write_csv(fichier)
                 continue
             elif el.startswith("https://books.toscrape.com/catalogue/"):
                 # Scraping a book
                 print("Scraping a single book...")
                 fichier = self.load_book(el) + ".csv"
-                ecrire_csv(fichier)
+                write_csv(fichier)
                 continue
             elif el == "https://books.toscrape.com/" or el == "https://books.toscrape.com":
                 # Scraping the whole site
@@ -89,7 +105,7 @@ class ScrapeIt:
         # Scraping a category
         try:
             requete = requests.request("get", el)
-        except:
+        except BaseException:
             print(f"Cannot load {el}")
             return 1
 
@@ -103,7 +119,8 @@ class ScrapeIt:
         # Extrait articles data
         to_visit = False
         for article in soup.select("article a"):
-            article_page = "https://books.toscrape.com/catalogue/" + article.attrs.get("href")[9:]
+            article_page = "https://books.toscrape.com/catalogue/" + \
+                           article.attrs.get("href")[9:]
             to_visit = not to_visit
             if to_visit:
                 self.load_book(article_page)
@@ -111,15 +128,16 @@ class ScrapeIt:
         # Go to next page
         for next_page in soup.select(".next a"):
             if next_page:
-                next_page = requete.url[:requete.url.rfind("/")] + "/" + next_page.attrs.get("href")
+                next_page = requete.url[:requete.url.rfind(
+                    "/")] + "/" + next_page.attrs.get("href")
                 self.scraping_category(next_page)
 
-    def load_images(self):
+    """def load_images(self):
         # Download images
         global library
 
         for livre in library:
-            print(f"Downloading image {livre.image_url}")
+            print(f"Downloading image {livre.image_url}")"""
 
     def load_book(self, el):
         # Download a book
@@ -138,7 +156,7 @@ class ScrapeIt:
 
         try:
             requete = requests.request("get", el)
-        except:
+        except BaseException:
             print(f"Can't load {el}")
             return 1
 
@@ -159,10 +177,13 @@ class ScrapeIt:
                 elif line.th.text == "Price (incl. tax)":
                     new_book.price_including_tax = float(line.td.text[2:])
                 elif line.th.text == "Availability":
-                    new_book.number_available = int(''.join(c for c in line.td.text if c.isdigit()))
+                    new_book.number_available = int(
+                        ''.join(c for c in line.td.text if c.isdigit()))
         new_book.title = soup.select(".product_main h1")[0].text
-        new_book.product_description = soup.select("article > p")[0].text.strip(" \n\r")
-        new_book.category = soup.select("body > div > div > ul > li > a")[2].text
+        new_book.product_description = soup.select(
+            "article > p")[0].text.strip(" \n\r")
+        new_book.category = soup.select(
+            "body > div > div > ul > li > a")[2].text
         stars = str(soup.select(".star-rating")[0])
         offset = stars.find("star-rating")
         stars = stars[offset:offset + 15]
@@ -178,8 +199,10 @@ class ScrapeIt:
         elif "Fiv" in stars:
             rating = 5
         new_book.review_rating = rating
-        image_url = str(soup.select("article > div > div > div > div > div > div > img")[0])
-        image_url = "https://books.toscrape.com/" + image_url[image_url.find("src=\"")+11:image_url.find("\"/>")]
+        image_url = str(
+            soup.select("article > div > div > div > div > div > div > img")[0])
+        image_url = "https://books.toscrape.com/" + \
+                    image_url[image_url.find("src=\"") + 11:image_url.find("\"/>")]
         new_book.image_url = image_url
 
         library.append([new_book.product_page_url,
@@ -195,10 +218,12 @@ class ScrapeIt:
 
         if include_images:
             # Download image if needed
+            create_directory("csv" + os.sep + new_book.category)
             print(f"Downloading image: {new_book.image_url}")
             reponse = requests.get(new_book.image_url, stream=True)
             if reponse.status_code == 200:
-                with open(new_book.image_url[new_book.image_url.rfind("/")+1:], 'wb') as f:
+                with open("csv" + os.sep + new_book.category + os.sep + new_book.image_url[
+                                                                        new_book.image_url.rfind("/") + 1:], 'wb') as f:
                     reponse.raw.decode_content = True
                     shutil.copyfileobj(reponse.raw, f)
         return new_book.title
@@ -209,7 +234,7 @@ class ScrapeIt:
 
         try:
             requete = requests.request("get", el)
-        except:
+        except BaseException:
             print(f"Can't load {el}")
             return 1
 
