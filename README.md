@@ -1,4 +1,4 @@
-# P2
+# P2 - ScrapeIt
 Programme d'extraction des prix  
 ## Descriptif :  
 Extraire les données suivantes: 
